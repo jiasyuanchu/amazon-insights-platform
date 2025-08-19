@@ -34,7 +34,7 @@ class Competitor(BaseModel):
     is_direct_competitor = Column(Integer, default=1, nullable=False)  # 1=direct, 2=indirect
     
     # Relationships
-    main_product = relationship("Product")
+    main_product = relationship("Product", back_populates="competitors")
     analyses = relationship("CompetitorAnalysis", back_populates="competitor", cascade="all, delete-orphan")
     
     def __repr__(self) -> str:

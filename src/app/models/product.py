@@ -44,6 +44,11 @@ class Product(BaseModel):
     # Relationships
     user = relationship("User", back_populates="products")
     metrics = relationship("ProductMetrics", back_populates="product", cascade="all, delete-orphan")
+    competitors = relationship("Competitor", back_populates="main_product", cascade="all, delete-orphan")
+    insights = relationship("ProductInsight", back_populates="product", cascade="all, delete-orphan")
+    price_history = relationship("PriceHistory", back_populates="product", cascade="all, delete-orphan")
+    alert_configurations = relationship("AlertConfiguration", back_populates="product", cascade="all, delete-orphan")
+    alert_history = relationship("AlertHistory", back_populates="product", cascade="all, delete-orphan")
     
     def __repr__(self) -> str:
         return f"<Product(id={self.id}, asin={self.asin}, title={self.title[:30]}...)>"

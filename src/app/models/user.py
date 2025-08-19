@@ -24,6 +24,7 @@ class User(BaseModel):
     
     # Relationships
     products = relationship("Product", back_populates="user", cascade="all, delete-orphan")
+    alert_configurations = relationship("AlertConfiguration", back_populates="user", cascade="all, delete-orphan")
     
     def __repr__(self) -> str:
         return f"<User(id={self.id}, email={self.email}, username={self.username})>"
