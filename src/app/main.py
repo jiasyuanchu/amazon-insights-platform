@@ -5,6 +5,7 @@ from prometheus_client import make_asgi_app
 import structlog
 from src.app.core.config import settings
 from src.app.core.database import init_db, close_db
+from src.app.core.redis import redis_client
 from src.app.api.v1.api import api_router
 
 # Configure structured logging
@@ -33,11 +34,13 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting up", app_name=settings.APP_NAME, version=settings.APP_VERSION)
     await init_db()
+    await redis_client.connect()
     
     yield
     
     # Shutdown
     logger.info("Shutting down")
+    await redis_client.disconnect()
     await close_db()
 
 
