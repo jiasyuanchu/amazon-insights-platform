@@ -1,0 +1,29 @@
+Database Migrations with Alembic
+
+This directory contains database migration scripts managed by Alembic.
+
+## Common Commands
+
+```bash
+# Create a new migration
+alembic revision --autogenerate -m "Description of changes"
+
+# Apply migrations
+alembic upgrade head
+
+# Rollback one migration
+alembic downgrade -1
+
+# View current migration
+alembic current
+
+# View migration history
+alembic history
+```
+
+## Development Workflow
+
+1. Make changes to SQLAlchemy models
+2. Generate migration: `alembic revision --autogenerate -m "your message"`
+3. Review generated migration file
+4. Apply migration: `alembic upgrade head`
