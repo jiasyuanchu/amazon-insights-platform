@@ -32,4 +32,4 @@ class UserResponse(UserBase):
     last_login: Optional[datetime] = None
     
     class Config:
-        from_attributes = True
+        orm_mode = True
