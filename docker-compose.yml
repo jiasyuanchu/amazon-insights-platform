@@ -34,17 +34,18 @@ services:
   api:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     container_name: amazon_insights_api
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/amazon_insights
+      - SECRET_KEY=dev-secret-key-change-in-production
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/amazon_insights
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/1
       - CELERY_RESULT_BACKEND=redis://redis:6379/2
     ports:
       - "8000:8000"
     volumes:
-      - ./src:/app/src
+      - .:/app
     depends_on:
       postgres:
         condition: service_healthy
@@ -58,12 +59,13 @@ services:
       dockerfile: Dockerfile
     container_name: amazon_insights_celery_worker
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/amazon_insights
+      - SECRET_KEY=dev-secret-key-change-in-production
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/amazon_insights
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/1
       - CELERY_RESULT_BACKEND=redis://redis:6379/2
     volumes:
-      - ./src:/app/src
+      - .:/app
     depends_on:
       postgres:
         condition: service_healthy
@@ -77,12 +79,13 @@ services:
       dockerfile: Dockerfile
     container_name: amazon_insights_celery_beat
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/amazon_insights
+      - SECRET_KEY=dev-secret-key-change-in-production
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/amazon_insights
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/1
       - CELERY_RESULT_BACKEND=redis://redis:6379/2
     volumes:
-      - ./src:/app/src
+      - .:/app
     depends_on:
       postgres:
         condition: service_healthy

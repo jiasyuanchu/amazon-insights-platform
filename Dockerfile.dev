@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Copy requirements files
-COPY requirements-dev.txt .
+COPY requirements.txt requirements-dev.txt ./
 
 # Install Python dependencies including dev dependencies
 RUN pip install --upgrade pip && \
