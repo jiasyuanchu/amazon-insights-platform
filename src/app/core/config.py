@@ -1,7 +1,8 @@
-from typing import Any, Optional
-from pydantic import Field, PostgresDsn, RedisDsn, field_validator
+from typing import Any, Optional, Union
+from pydantic import Field, PostgresDsn, RedisDsn, AnyUrl, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 import json
+import os
 
 
 class Settings(BaseSettings):
@@ -22,7 +23,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = Field(default="/api/v1")
 
     # Database
-    DATABASE_URL: PostgresDsn = Field(...)
+    DATABASE_URL: Union[PostgresDsn, AnyUrl] = Field(...)
     DATABASE_POOL_SIZE: int = Field(default=20)
     DATABASE_MAX_OVERFLOW: int = Field(default=40)
 
@@ -76,6 +77,10 @@ class Settings(BaseSettings):
     @property
     def is_development(self) -> bool:
         return self.ENVIRONMENT == "development"
+    
+    @property
+    def is_testing(self) -> bool:
+        return self.ENVIRONMENT == "test" or os.getenv("TESTING") == "true"
 
 
 settings = Settings()
