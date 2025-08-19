@@ -1,0 +1,32 @@
+FROM python:3.11-slim
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    postgresql-client \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set work directory
+WORKDIR /app
+
+# Copy requirements files
+COPY requirements-dev.txt .
+
+# Install Python dependencies including dev dependencies
+RUN pip install --upgrade pip && \
+    pip install -r requirements-dev.txt
+
+# Copy project files
+COPY . .
+
+# Install project in editable mode
+RUN pip install -e .
+
+# Run the application with reload
+CMD ["uvicorn", "src.app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
