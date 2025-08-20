@@ -1,7 +1,7 @@
 """OpenAI API service wrapper"""
 
 from typing import Dict, Any, List, Optional
-import openai
+from openai import AsyncOpenAI
 from src.app.core.config import settings
 import structlog
 
@@ -15,7 +15,9 @@ class OpenAIService:
         self.api_key = settings.OPENAI_API_KEY
         self.model = settings.OPENAI_MODEL
         if self.api_key:
-            openai.api_key = self.api_key
+            self.client = AsyncOpenAI(api_key=self.api_key)
+        else:
+            self.client = None
     
     async def generate_product_insights(
         self,
@@ -45,7 +47,7 @@ class OpenAIService:
             prompt = self._build_insights_prompt(product_data, metrics_history)
             
             # Call OpenAI API
-            response = await openai.ChatCompletion.acreate(
+            response = await self.client.chat.completions.create(
                 model=self.model,
                 messages=[
                     {"role": "system", "content": "You are an expert Amazon seller consultant."},
@@ -98,7 +100,7 @@ class OpenAIService:
         try:
             prompt = self._build_competitive_prompt(product, competitors)
             
-            response = await openai.ChatCompletion.acreate(
+            response = await self.client.chat.completions.create(
                 model=self.model,
                 messages=[
                     {"role": "system", "content": "You are an expert in competitive analysis for e-commerce."},
@@ -147,7 +149,7 @@ class OpenAIService:
                 main_product, competitor_analyses
             )
             
-            response = await openai.ChatCompletion.acreate(
+            response = await self.client.chat.completions.create(
                 model=self.model,
                 messages=[
                     {
@@ -195,7 +197,7 @@ class OpenAIService:
         try:
             prompt = self._build_trend_analysis_prompt(category, historical_data)
             
-            response = await openai.ChatCompletion.acreate(
+            response = await self.client.chat.completions.create(
                 model=self.model,
                 messages=[
                     {

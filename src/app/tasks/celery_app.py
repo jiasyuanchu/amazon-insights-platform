@@ -11,6 +11,7 @@ celery_app = Celery(
         "src.app.tasks.product_tasks",
         "src.app.tasks.scraping_tasks",
         "src.app.tasks.analysis_tasks",
+        "src.app.tasks.competitor_tasks",
     ]
 )
 
@@ -37,7 +38,7 @@ celery_app.conf.beat_schedule = {
         "options": {"queue": "scraping"},
     },
     "hourly-price-monitoring": {
-        "task": "src.app.tasks.product_tasks.monitor_price_changes",
+        "task": "monitor_price_changes",
         "schedule": crontab(minute=0),  # Run every hour
         "options": {"queue": "monitoring"},
     },
@@ -47,7 +48,7 @@ celery_app.conf.beat_schedule = {
         "options": {"queue": "analysis"},
     },
     "cleanup-old-metrics": {
-        "task": "src.app.tasks.product_tasks.cleanup_old_metrics",
+        "task": "cleanup_old_metrics",
         "schedule": crontab(hour=4, minute=0, day_of_week=0),  # Run weekly on Sunday at 4 AM
         "options": {"queue": "maintenance"},
     },
