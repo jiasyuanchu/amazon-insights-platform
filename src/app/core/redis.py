@@ -108,5 +108,12 @@ class RedisClient:
 redis_client = RedisClient()
 
 
+async def get_redis_client():
+    """Get Redis client instance for rate limiting and other uses"""
+    if not redis_client.redis_client:
+        await redis_client.connect()
+    return redis_client.redis_client
+
+
 async def get_redis() -> RedisClient:
     return redis_client

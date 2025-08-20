@@ -64,19 +64,14 @@ class FirecrawlService:
                 logger.info("firecrawl_cache_hit", url=url)
                 return json.loads(cached_data)
         
-        # Build request payload
+        # Build request payload for Firecrawl v1 API
         payload = {
             "url": url,
-            "formats": ["markdown", "html", "extract"],
-            "onlyMainContent": True,
-            "removeBase64Images": True,
+            "formats": ["markdown"]  # v1 API uses simplified formats
         }
         
-        if wait_for_selector:
-            payload["waitFor"] = wait_for_selector
-        
-        if extract_schema:
-            payload["extract"] = extract_schema
+        # v1 API doesn't support these old parameters
+        # Instead, we'll rely on markdown parsing
         
         try:
             logger.info("firecrawl_scraping", url=url)
@@ -90,10 +85,10 @@ class FirecrawlService:
             
             # Cache successful response
             if use_cache and data.get("success"):
-                await redis_client.setex(
+                await redis_client.set(
                     cache_key,
-                    int(self.cache_ttl.total_seconds()),
-                    json.dumps(data)
+                    json.dumps(data),
+                    expire=int(self.cache_ttl.total_seconds())
                 )
             
             return data
@@ -120,46 +115,141 @@ class FirecrawlService:
         """
         url = f"https://www.amazon.com/dp/{asin}"
         
-        # Define extraction schema for Amazon products
-        extract_schema = {
-            "type": "object",
-            "properties": {
-                "title": {
-                    "type": "string",
-                    "selector": "h1#title span"
-                },
-                "price": {
-                    "type": "string", 
-                    "selector": "span.a-price-whole"
-                },
-                "rating": {
-                    "type": "string",
-                    "selector": "span.a-icon-alt"
-                },
-                "availability": {
-                    "type": "string",
-                    "selector": "div#availability span"
-                },
-                "bsr_rank": {
-                    "type": "string",
-                    "selector": "#SalesRank"
-                },
-                "feature_bullets": {
-                    "type": "array",
-                    "selector": "div#feature-bullets ul.a-unordered-list li span.a-list-item"
-                },
-                "images": {
-                    "type": "array",
-                    "selector": "div#altImages ul.a-unordered-list img"
+        try:
+            # Scrape without complex schema first
+            result = await self.scrape_url(
+                url=url,
+                wait_for_selector=None,  # Don't wait for specific selector
+                extract_schema=None,  # Don't use schema extraction for now
+                use_cache=True
+            )
+            
+            if result and result.get("success"):
+                data = result.get("data", {})
+                markdown_content = data.get("markdown", "")
+                
+                # Parse basic info from markdown
+                parsed_data = {
+                    "asin": asin,
+                    "url": url,
+                    "title": self._extract_title_from_markdown(markdown_content),
+                    "price": self._extract_price_from_markdown(markdown_content),
+                    "rating": self._extract_rating_from_markdown(markdown_content),
+                    "review_count": self._extract_review_count_from_markdown(markdown_content),
+                    "availability": self._extract_availability_from_markdown(markdown_content),
+                    "raw_markdown": markdown_content[:1000],  # Store first 1000 chars for reference
+                    "success": True
                 }
+                
+                return parsed_data
+            else:
+                logger.warning("firecrawl_scrape_failed", asin=asin, url=url)
+                return {
+                    "asin": asin,
+                    "url": url,
+                    "success": False,
+                    "error": result.get("error", "Unknown error")
+                }
+                
+        except Exception as e:
+            logger.error("scrape_amazon_product_error", asin=asin, error=str(e))
+            return {
+                "asin": asin,
+                "url": url,
+                "success": False,
+                "error": str(e)
             }
-        }
+    
+    def _extract_title_from_markdown(self, markdown: str) -> str:
+        """Extract product title from markdown content"""
+        import re
+        # Look for common title patterns
+        patterns = [
+            r'#\s+([^\n]+)',  # H1 heading
+            r'##\s+([^\n]+)',  # H2 heading
+            r'\*\*([^*]+)\*\*',  # Bold text (often titles)
+        ]
         
-        return await self.scrape_url(
-            url=url,
-            wait_for_selector="h1#title",
-            extract_schema=extract_schema
-        )
+        for pattern in patterns:
+            match = re.search(pattern, markdown[:500])  # Search in first 500 chars
+            if match:
+                title = match.group(1).strip()
+                if len(title) > 10 and len(title) < 200:  # Reasonable title length
+                    return title
+        
+        return "Unknown Product"
+    
+    def _extract_price_from_markdown(self, markdown: str) -> str:
+        """Extract price from markdown content"""
+        import re
+        # Look for price patterns
+        patterns = [
+            r'\$([0-9,]+\.?[0-9]*)',  # $123.45 or $1,234
+            r'USD\s*([0-9,]+\.?[0-9]*)',  # USD 123.45
+        ]
+        
+        for pattern in patterns:
+            matches = re.findall(pattern, markdown)
+            if matches:
+                # Return the first reasonable price found
+                for price in matches:
+                    price_float = float(price.replace(',', ''))
+                    if 0.01 <= price_float <= 100000:  # Reasonable price range
+                        return f"${price}"
+        
+        return "N/A"
+    
+    def _extract_rating_from_markdown(self, markdown: str) -> str:
+        """Extract rating from markdown content"""
+        import re
+        # Look for rating patterns
+        patterns = [
+            r'([0-9]\.?[0-9]?)\s*out of\s*5',  # 4.5 out of 5
+            r'([0-9]\.?[0-9]?)\s*stars?',  # 4.5 stars
+            r'Rating:\s*([0-9]\.?[0-9]?)',  # Rating: 4.5
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, markdown, re.IGNORECASE)
+            if match:
+                rating = match.group(1)
+                try:
+                    rating_float = float(rating)
+                    if 0 <= rating_float <= 5:
+                        return f"{rating} stars"
+                except:
+                    pass
+        
+        return "N/A"
+    
+    def _extract_review_count_from_markdown(self, markdown: str) -> str:
+        """Extract review count from markdown content"""
+        import re
+        # Look for review count patterns
+        patterns = [
+            r'([0-9,]+)\s*(?:customer\s*)?reviews?',  # 1,234 reviews or 1,234 customer reviews
+            r'([0-9,]+)\s*ratings?',  # 1,234 ratings
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, markdown, re.IGNORECASE)
+            if match:
+                return match.group(1)
+        
+        return "0"
+    
+    def _extract_availability_from_markdown(self, markdown: str) -> str:
+        """Extract availability from markdown content"""
+        if "in stock" in markdown.lower():
+            return "In Stock"
+        elif "out of stock" in markdown.lower():
+            return "Out of Stock"
+        elif "currently unavailable" in markdown.lower():
+            return "Currently Unavailable"
+        elif "available" in markdown.lower():
+            return "Available"
+        
+        return "Unknown"
     
     async def batch_scrape(
         self, 
