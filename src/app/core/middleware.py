@@ -22,7 +22,7 @@ class SecurityMiddleware:
     def __init__(self, app):
         self.app = app
     
-    async def __call__(self, request: Request, call_next: Callable) -> Response:
+    async def __call__(self, scope, receive, send):
         """Process request through security layers"""
         
         # Generate request ID for tracking

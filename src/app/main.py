@@ -1,11 +1,11 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from prometheus_client import make_asgi_app
 import structlog
 from src.app.core.config import settings
 from src.app.core.database import init_db, close_db
 from src.app.core.redis import redis_client
-from src.app.core.middleware import setup_security_middleware
 from src.app.api.v1.api import api_router
 
 # Configure structured logging
@@ -114,30 +114,45 @@ def create_application() -> FastAPI:
         },
         openapi_tags=[
             {
-                "name": "Authentication",
+                "name": "health",
+                "description": "System health and monitoring endpoints",
+            },
+            {
+                "name": "authentication",
                 "description": "User authentication and authorization endpoints",
             },
             {
-                "name": "Users", 
+                "name": "users", 
                 "description": "User management operations",
             },
             {
-                "name": "Products",
+                "name": "products",
                 "description": "Product tracking and management operations",
             },
             {
-                "name": "Competitors",
+                "name": "competitors",
                 "description": "Competitive intelligence and analysis operations",
             },
             {
-                "name": "Health",
-                "description": "System health and monitoring endpoints",
+                "name": "cache",
+                "description": "Cache management operations",
+            },
+            {
+                "name": "rate-limits",
+                "description": "Rate limiting management",
             },
         ],
     )
 
-    # Set up security middleware (includes CORS, rate limiting, security headers, etc.)
-    setup_security_middleware(app)
+    # Set up CORS
+    if settings.BACKEND_CORS_ORIGINS:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=settings.BACKEND_CORS_ORIGINS,
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
 
     # Add Prometheus metrics endpoint
     if settings.PROMETHEUS_ENABLED:
