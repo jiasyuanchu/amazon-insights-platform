@@ -10,7 +10,7 @@ from src.app.schemas.product import (
 )
 from src.app.schemas.competitor import (
     CompetitorBase, CompetitorCreate, CompetitorResponse,
-    CompetitorAnalysisRequest, CompetitorAnalysisResponse
+    CompetitorDiscoveryRequest, CompetitorAnalysisResponse
 )
 from src.app.schemas.auth import Token, TokenData
 
@@ -197,18 +197,16 @@ class TestCompetitorSchemas:
         assert competitor.similarity_score == 0.85
         assert competitor.is_direct_competitor is True
     
-    def test_competitor_analysis_request_schema(self):
-        """Test competitor analysis request schema"""
+    def test_competitor_discovery_request_schema(self):
+        """Test competitor discovery request schema"""
         request_data = {
             'product_id': 1,
-            'competitor_id': 2,
-            'analysis_type': 'pricing_comparison'
+            'max_competitors': 10
         }
-        request = CompetitorAnalysisRequest(**request_data)
+        request = CompetitorDiscoveryRequest(**request_data)
         
         assert request.product_id == 1
-        assert request.competitor_id == 2
-        assert request.analysis_type == 'pricing_comparison'
+        assert request.max_competitors == 10
     
     def test_competitor_analysis_response_schema(self):
         """Test competitor analysis response schema"""

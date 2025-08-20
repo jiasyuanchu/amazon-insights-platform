@@ -15,6 +15,11 @@ class CompetitorBase(BaseModel):
     is_direct_competitor: int = Field(1, ge=1, le=2)
 
 
+class CompetitorCreate(CompetitorBase):
+    """Schema for creating a new competitor"""
+    main_product_id: int
+
+
 class CompetitorResponse(CompetitorBase):
     id: int
     main_product_id: int
